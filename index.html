@@ -1482,6 +1482,7 @@
             renderPrizeOptions();
 
             const sBtn = document.getElementById("spinGo"),
+                spinCodeInput = document.getElementById("spinCode"),
                 sMsg = document.getElementById("spinMsg"),
                 sRes = document.getElementById("spinRes"),
                 sClose = document.getElementById("spinClose"),
@@ -1514,10 +1515,7 @@
                     sMsg.textContent = "Semua hadiah sudah terpilih.";
                     return;
                 }
-                const code = document
-                    .getElementById("spinCode")
-                    .value.trim()
-                    .toUpperCase();
+                const code = spinCodeInput.value.trim().toUpperCase();
                 if (!spinCodes.includes(code)) {
                     sMsg.textContent = "Kode tidak valid. Tanya kasir ya 🙏";
                     return;
@@ -1531,6 +1529,7 @@
                 sMsg.textContent = "Berputar...";
                 sBusy = true;
                 sBtn.disabled = true;
+                spinCodeInput.value = "";
                 const selected = pickOption(),
                     type = selected.type,
                     i = selected.index;
