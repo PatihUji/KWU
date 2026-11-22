@@ -150,9 +150,10 @@
                     <h2>Pembayaran QRIS</h2>
                     <span class="count" id="qrisStatus">Belum diunggah</span>
                 </div>
-                <p class="note">Pilih folder <code>qris</code> saat pertama kali. Pilihan folder akan diingat untuk upload berikutnya.</p>
-                <form id="qrisForm" style="grid-template-columns: minmax(0, 1fr) auto">
+                <p class="note">QRIS disimpan di Vercel Blob. Masukkan password admin yang disetel pada environment variable <code>QRIS_ADMIN_PASSWORD</code>.</p>
+                <form id="qrisForm" style="grid-template-columns: minmax(0, 1fr) minmax(180px, 0.7fr) auto">
                     <input id="qrisFile" type="file" accept="image/png,image/jpeg,image/webp" required />
+                    <input id="qrisPassword" type="password" autocomplete="current-password" placeholder="Password admin QRIS" required />
                     <button id="qrisSubmit" type="submit">Unggah QRIS</button>
                 </form>
                 <img class="qris-preview" id="qrisPreview" alt="Pratinjau QRIS" hidden />
@@ -218,54 +219,24 @@
             const qrisForm = document.getElementById("qrisForm");
             const qrisFile = document.getElementById("qrisFile");
             const qrisSubmit = document.getElementById("qrisSubmit");
+            const qrisPassword = document.getElementById("qrisPassword");
             const qrisStatus = document.getElementById("qrisStatus");
             const qrisPreview = document.getElementById("qrisPreview");
             const qrisMessage = document.getElementById("qrisMessage");
-            const QRIS_STORAGE_KEY = "cattyBunQrisFile";
-            const QRIS_DB_NAME = "cattyBunFileAccess";
-            function openQrisDatabase() {
-                return new Promise((resolve, reject) => {
-                    const request = indexedDB.open(QRIS_DB_NAME, 1);
-                    request.onupgradeneeded = () => request.result.createObjectStore("handles");
-                    request.onsuccess = () => resolve(request.result);
-                    request.onerror = () => reject(request.error);
-                });
-            }
-            async function getSavedQrisDirectory() {
-                const db = await openQrisDatabase();
-                return new Promise((resolve, reject) => {
-                    const request = db.transaction("handles", "readonly").objectStore("handles").get("qris");
-                    request.onsuccess = () => { db.close(); resolve(request.result || null); };
-                    request.onerror = () => { db.close(); reject(request.error); };
-                });
-            }
-            async function saveQrisDirectory(handle) {
-                const db = await openQrisDatabase();
-                return new Promise((resolve, reject) => {
-                    const transaction = db.transaction("handles", "readwrite");
-                    transaction.objectStore("handles").put(handle, "qris");
-                    transaction.oncomplete = () => { db.close(); resolve(); };
-                    transaction.onerror = () => { db.close(); reject(transaction.error); };
-                });
-            }
-            async function getQrisDirectory() {
-                if (!window.showDirectoryPicker) throw new Error("Browser ini belum mendukung akses folder. Gunakan Chrome atau Edge.");
-                let directory = await getSavedQrisDirectory();
-                if (!directory) {
-                    directory = await window.showDirectoryPicker({ mode: "readwrite" });
-                    await saveQrisDirectory(directory);
+            async function loadQrisStatus() {
+                try {
+                    const response = await fetch("/api/qris", { cache: "no-store" });
+                    const result = await response.json();
+                    if (response.ok && result.available) {
+                        qrisStatus.textContent = "QRIS tersedia";
+                        qrisPreview.src = result.url;
+                        qrisPreview.hidden = false;
+                    }
+                } catch (error) {
+                    qrisMessage.textContent = "QRIS Blob belum tersedia atau API belum ter-deploy.";
                 }
-                let permission = await directory.queryPermission({ mode: "readwrite" });
-                if (permission !== "granted") permission = await directory.requestPermission({ mode: "readwrite" });
-                if (permission !== "granted") throw new Error("Izin menulis ke folder qris belum diberikan.");
-                return directory;
             }
-            const savedQrisFile = localStorage.getItem(QRIS_STORAGE_KEY);
-            if (savedQrisFile) {
-                qrisStatus.textContent = "QRIS tersedia";
-                qrisPreview.src = `qris/${encodeURIComponent(savedQrisFile)}`;
-                qrisPreview.hidden = false;
-            }
+            loadQrisStatus();
             qrisForm.addEventListener("submit", async (event) => {
                 event.preventDefault();
                 const file = qrisFile.files[0];
@@ -274,31 +245,28 @@
                     qrisMessage.textContent = "Format gambar harus PNG, JPG, atau WebP.";
                     return;
                 }
-                if (file.size > 5 * 1024 * 1024) {
-                    qrisMessage.textContent = "Ukuran gambar maksimal 5 MB.";
+                if (file.size > 4 * 1024 * 1024) {
+                    qrisMessage.textContent = "Ukuran gambar maksimal 4 MB.";
                     return;
                 }
                 qrisSubmit.disabled = true; qrisMessage.textContent = "Mengunggah QRIS…";
                 try {
-                    const qrisDirectory = await getQrisDirectory();
-                    const extension = file.type === "image/jpeg" ? "jpg" : file.type.split("/")[1];
-                    const filename = `payment-qris.${extension}`;
-                    for (const oldExtension of ["png", "jpg", "webp"]) {
-                        if (oldExtension !== extension) {
-                            try { await qrisDirectory.removeEntry(`payment-qris.${oldExtension}`); } catch (error) {}
-                        }
-                    }
-                    const imageHandle = await qrisDirectory.getFileHandle(filename, { create: true });
-                    const writable = await imageHandle.createWritable();
-                    await writable.write(file);
-                    await writable.close();
-                    localStorage.setItem(QRIS_STORAGE_KEY, filename);
+                    const response = await fetch("/api/qris", {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": file.type,
+                            "X-QRIS-Admin-Password": qrisPassword.value,
+                        },
+                        body: file,
+                    });
+                    const result = await response.json();
+                    if (!response.ok) throw new Error(result.error || "Upload QRIS gagal.");
                     qrisStatus.textContent = "QRIS tersedia";
-                    qrisPreview.src = `qris/${encodeURIComponent(filename)}?t=${Date.now()}`;
-                    qrisPreview.hidden = false; qrisMessage.textContent = "QRIS berhasil disimpan di folder qris.";
+                    qrisPreview.src = `${result.url}?t=${Date.now()}`;
+                    qrisPreview.hidden = false; qrisMessage.textContent = "QRIS berhasil disimpan ke Vercel Blob.";
                     qrisForm.reset();
                 } catch (error) {
-                    qrisMessage.textContent = error.name === "AbortError" ? "Pemilihan folder dibatalkan." : error.message;
+                    qrisMessage.textContent = error.message;
                 } finally { qrisSubmit.disabled = false; }
             });
             const MENU_KEY = "cattyBunMenus";
