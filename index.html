@@ -6,7 +6,7 @@
             name="viewport"
             content="width=device-width, initial-scale=1, viewport-fit=cover"
         />
-        <title>Manis Manis Gitu? · Menu dan Promo</title>
+        <title>Manis-Manis Gitu? · Menu dan Promo</title>
         <link
             href="https://fonts.googleapis.com/css2?family=Cherry+Bomb+One&family=Gaegu:wght@400;700&family=Nunito:wght@400;700&display=swap"
             rel="stylesheet"
@@ -875,7 +875,7 @@
     <body>
         <div id="dot"></div>
         <nav>
-            <a href="#top" class="logo"><img data-k="logo" alt="" />Manis Manis Gitu?</a
+            <a href="#top" class="logo"><img data-k="logo" alt="" />Manis-Manis Gitu?</a
             ><span
                 ><a href="#menu">Menu</a><a href="#spin">Spin 🎡</a
                 ><a href="#pesan">Pesan</a></span
@@ -891,32 +891,15 @@
                 ><span class="ln"><span>bikin balik</span></span
                 ><span class="ln"><span>lagi!</span></span>
             </h1>
-            <p>
-                Dalgona kopi, bolu pisang &amp; donat susu. Teman ngobrol dan
-                ngerjain tugas.
-            </p>
+            <p id="heroMenuSummary">Menu manis untuk menemani harimu.</p>
             <a class="badge" href="#spin">Spin<br />berhadiah!</a>
-            <img class="mascot" data-k="tray" alt="Maskot Manis Manis Gitu?" />
+            <img class="mascot" data-k="tray" alt="Maskot Manis-Manis Gitu?" />
         </header>
         <div class="rug"></div>
-        <div class="mq" aria-label="Dalgona Kopi, Bolu Pisang, Donat Susu, dan Spin Berhadiah">
+        <div class="mq" id="menuMarquee" aria-label="Menu Manis-Manis Gitu?">
             <div class="mq-track">
-                <div class="mq-group">
-                    <span>Dalgona Kopi</span>✿<span>Bolu Pisang</span>✿<span
-                        >Donat Susu</span
-                    >✿<span>Spin Berhadiah</span>✿<span>Dalgona Kopi</span
-                    >✿<span>Bolu Pisang</span>✿<span>Donat Susu</span>✿<span
-                        >Spin Berhadiah</span
-                    >✿
-                </div>
-                <div class="mq-group" aria-hidden="true">
-                    <span>Dalgona Kopi</span>✿<span>Bolu Pisang</span>✿<span
-                        >Donat Susu</span
-                    >✿<span>Spin Berhadiah</span>✿<span>Dalgona Kopi</span
-                    >✿<span>Bolu Pisang</span>✿<span>Donat Susu</span>✿<span
-                        >Spin Berhadiah</span
-                    >✿
-                </div>
+                <div class="mq-group" id="mqGroupA"></div>
+                <div class="mq-group" id="mqGroupB" aria-hidden="true"></div>
             </div>
         </div>
 
@@ -947,7 +930,7 @@
                             width="720"
                             height="720"
                             role="img"
-                            aria-label="Roda hadiah Catty Bun"
+                            aria-label="Roda hadiah Manis-Manis Gitu?"
                         ></canvas
                         ><img class="sidecat" data-k="wave" alt="" /><img
                             class="hubcat"
@@ -984,12 +967,12 @@
                 <div class="lab">Pembayaran</div>
                 <h2 class="sec">Bayar mudah dengan QRIS</h2>
                 <p id="qrisEmpty">QRIS pembayaran akan ditampilkan di sini.</p>
-                <img id="paymentQris" alt="Kode QRIS pembayaran Manis Manis Gitu?" hidden style="display:block;max-width:min(480px,92vw);max-height:560px;object-fit:contain;margin:18px auto;background:#fff;border:4px solid #5e2c1a;border-radius:16px;padding:10px" />
+                <img id="paymentQris" alt="Kode QRIS pembayaran Manis-Manis Gitu?" hidden style="display:block;max-width:min(480px,92vw);max-height:560px;object-fit:contain;margin:18px auto;background:#fff;border:4px solid #5e2c1a;border-radius:16px;padding:10px" />
             </div>
         </section>
         <footer>
-            <img class="flogo" data-k="logo" alt="Manis Manis Gitu?" />
-            <div class="d">Manis Manis Gitu?</div>
+            <img class="flogo" data-k="logo" alt="Manis-Manis Gitu?" />
+            <div class="d">Manis-Manis Gitu?</div>
             bakery, daily &amp; little joys<br /><small
                 style="
                     font:
@@ -1031,7 +1014,8 @@
                 }
             } catch (error) {}
             const menuItems = document.getElementById("menuItems");
-            menus.filter((item) => item.enabled !== false).forEach((item) => {
+            const activeMenus = menus.filter((item) => item.enabled !== false);
+            activeMenus.forEach((item) => {
                 const row = document.createElement("div");
                 row.className = "row";
                 row.dataset.k = ["cup", "tray", "sit"].includes(item.image) ? item.image : "cup";
@@ -1042,6 +1026,27 @@
                 const description = document.createElement("div"); description.className = "ds"; description.textContent = item.description;
                 row.append(title, price, image, description); menuItems.appendChild(row);
             });
+            const marqueeGroups = [document.getElementById("mqGroupA"), document.getElementById("mqGroupB")];
+            marqueeGroups.forEach((group) => {
+                for (let copy = 0; copy < 2; copy++) {
+                    activeMenus.forEach((item, index) => {
+                        if (index > 0 || copy > 0) {
+                            const separator = document.createElement("span");
+                            separator.textContent = "✿";
+                            group.appendChild(separator);
+                        }
+                        const name = document.createElement("span");
+                        name.textContent = item.name;
+                        group.appendChild(name);
+                    });
+                }
+            });
+            if (activeMenus.length) {
+                const names = activeMenus.map((item) => item.name);
+                document.getElementById("heroMenuSummary").textContent =
+                    `${names.slice(0, -1).join(", ")}${names.length > 1 ? ` dan ${names[names.length - 1]}` : names[0]}. Teman ngobrol dan ngerjain tugas.`;
+                document.getElementById("menuMarquee").setAttribute("aria-label", `Menu: ${names.join(", ")}`);
+            }
             document
                 .querySelectorAll("img[data-k]")
                 .forEach((i) => (i.src = IM[i.dataset.k]));
