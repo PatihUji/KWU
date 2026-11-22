@@ -1,0 +1,603 @@
+<!doctype html>
+<html lang="id">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Kelola Spin Wheel · Catty Bun</title>
+        <link
+            href="https://fonts.googleapis.com/css2?family=Cherry+Bomb+One&family=Gaegu:wght@400;700&family=Nunito:wght@400;700&display=swap"
+            rel="stylesheet"
+        />
+        <style>
+            :root {
+                --cream: #fbf1d3;
+                --brown: #5e2c1a;
+                --coral: #e8603c;
+                --yellow: #edc94a;
+                --green: #7fa544;
+                --red: #b5432b;
+                --display: "Cherry Bomb One", cursive;
+                --hand: "Gaegu", cursive;
+            }
+            * { box-sizing: border-box; }
+            body {
+                margin: 0;
+                background: var(--yellow);
+                color: var(--brown);
+                font: 1rem/1.5 "Nunito", system-ui, sans-serif;
+            }
+            header {
+                padding: 32px max(20px, calc((100vw - 1100px) / 2));
+                background: var(--brown);
+                color: var(--cream);
+                border-bottom: 6px solid var(--coral);
+            }
+            header h1 {
+                margin: 10px 0 4px;
+                color: var(--yellow);
+                font: 400 clamp(2rem, 6vw, 4rem)/1 var(--display);
+            }
+            header p { margin: 0; }
+            .back {
+                color: var(--cream);
+                font: 700 1.1rem var(--hand);
+                text-decoration: none;
+            }
+            main {
+                width: min(1100px, calc(100% - 32px));
+                margin: 28px auto 60px;
+                display: grid;
+                gap: 24px;
+            }
+            .card {
+                background: var(--cream);
+                border: 4px solid var(--brown);
+                border-radius: 26px;
+                padding: clamp(18px, 4vw, 30px);
+                box-shadow: 8px 8px 0 var(--red);
+            }
+            .card-head {
+                display: flex;
+                align-items: end;
+                justify-content: space-between;
+                gap: 12px;
+                margin-bottom: 18px;
+            }
+            h2 {
+                margin: 0;
+                color: var(--red);
+                font: 400 clamp(1.55rem, 4vw, 2.25rem) var(--display);
+            }
+            .count {
+                padding: 5px 10px;
+                background: var(--yellow);
+                border-radius: 99px;
+                font: 700 0.95rem var(--hand);
+                white-space: nowrap;
+            }
+            .note { margin: -8px 0 16px; }
+            form {
+                display: grid;
+                grid-template-columns: repeat(2, minmax(0, 1fr)) auto;
+                gap: 9px;
+                margin-bottom: 18px;
+                padding-bottom: 18px;
+                border-bottom: 2px dashed var(--coral);
+            }
+            #codeForm { grid-template-columns: 1fr auto; }
+            input, select, button {
+                min-width: 0;
+                border: 3px solid var(--brown);
+                border-radius: 12px;
+                padding: 10px 12px;
+                background: #fff;
+                color: var(--brown);
+                font: 700 1rem var(--hand);
+            }
+            input[type="color"] { min-height: 46px; padding: 4px; }
+            button { cursor: pointer; background: var(--coral); color: #fff; }
+            button.secondary { background: var(--green); }
+            button.danger { background: var(--red); }
+            button:disabled { cursor: not-allowed; opacity: 0.45; }
+            .list { display: grid; gap: 9px; }
+            .row {
+                display: grid;
+                grid-template-columns: minmax(110px, 0.8fr) minmax(170px, 1.5fr) auto;
+                gap: 12px;
+                align-items: center;
+                padding: 12px;
+                background: #fff;
+                border: 2px solid rgba(94, 44, 26, 0.2);
+                border-radius: 14px;
+            }
+            .row.used { opacity: 0.6; }
+            .prize-row {
+                grid-template-columns: 30px minmax(100px, 0.7fr) minmax(190px, 1.5fr) auto auto;
+            }
+            code { color: var(--red); font-weight: 700; }
+            .meta { font-size: 0.86rem; line-height: 1.35; }
+            .actions { display: flex; gap: 6px; flex-wrap: wrap; }
+            .actions button { padding: 7px 9px; font-size: 0.88rem; }
+            .swatch {
+                width: 25px;
+                height: 25px;
+                border: 2px solid var(--brown);
+                border-radius: 50%;
+            }
+            .weight { font: 700 0.92rem var(--hand); white-space: nowrap; }
+            .empty {
+                padding: 18px;
+                text-align: center;
+                border: 2px dashed rgba(94, 44, 26, 0.3);
+                border-radius: 14px;
+            }
+            .qris-preview { display: block; max-width: min(360px, 90vw); max-height: 360px; object-fit: contain; margin: 14px 0; border: 2px solid rgba(94, 44, 26, 0.2); border-radius: 12px; background: #fff; }
+            @media (max-width: 720px) {
+                form, #codeForm, .row, .prize-row { grid-template-columns: 1fr; }
+                .card-head { align-items: flex-start; flex-direction: column; }
+            }
+        </style>
+    </head>
+    <body>
+        <header>
+            <a class="back" href="index.html">← Kembali ke spin wheel</a>
+            <h1>Kelola Spin Wheel</h1>
+            <p>Atur kode akses dan isi hadiah dari satu halaman.</p>
+        </header>
+        <main>
+            <section class="card">
+                <div class="card-head">
+                    <h2>Pembayaran QRIS</h2>
+                    <span class="count" id="qrisStatus">Belum diunggah</span>
+                </div>
+                <p class="note">Pilih folder <code>qris</code> saat pertama kali. Pilihan folder akan diingat untuk upload berikutnya.</p>
+                <form id="qrisForm" style="grid-template-columns: minmax(0, 1fr) auto">
+                    <input id="qrisFile" type="file" accept="image/png,image/jpeg,image/webp" required />
+                    <button id="qrisSubmit" type="submit">Unggah QRIS</button>
+                </form>
+                <img class="qris-preview" id="qrisPreview" alt="Pratinjau QRIS" hidden />
+                <div class="meta" id="qrisMessage" role="status" aria-live="polite"></div>
+            </section>
+
+            <section class="card">
+                <div class="card-head">
+                    <h2>Master menu</h2>
+                    <span class="count" id="menuCount">0 menu</span>
+                </div>
+                <p class="note">Menu aktif akan tampil di halaman utama. Harga ditulis dalam rupiah.</p>
+                <form id="menuForm">
+                    <input id="menuName" maxlength="50" placeholder="Nama menu" required />
+                    <input id="menuPrice" type="number" min="0" step="500" placeholder="Harga (Rp)" required />
+                    <input id="menuDescription" maxlength="180" placeholder="Deskripsi menu" required />
+                    <select id="menuImage" aria-label="Ilustrasi menu">
+                        <option value="cup">Kucing dan kopi</option>
+                        <option value="tray">Kucing dan makanan</option>
+                        <option value="sit">Kucing saja</option>
+                    </select>
+                    <button id="menuSubmit" type="submit">Tambah menu</button>
+                    <button class="secondary" id="menuCancel" type="button" hidden>Batal</button>
+                </form>
+                <div class="list" id="menuList"></div>
+            </section>
+
+            <section class="card">
+                <div class="card-head">
+                    <h2>Kode spin</h2>
+                    <span class="count" id="codeCount">0 kode</span>
+                </div>
+                <p class="note">Setiap kode hanya dapat dipakai satu kali.</p>
+                <form id="codeForm">
+                    <input id="codeInput" maxlength="20" placeholder="KODE SPIN BARU" required />
+                    <button type="submit">Tambah kode</button>
+                </form>
+                <div class="list" id="codeList"></div>
+            </section>
+
+            <section class="card">
+                <div class="card-head">
+                    <h2>Hadiah wheel</h2>
+                    <span class="count" id="prizeCount">0 segmen</span>
+                </div>
+                <p class="note">Masukkan nama hadiah dan keterangan yang akan ditampilkan kepada pemenang.</p>
+                <form id="prizeForm">
+                    <input id="prizeLabel" maxlength="18" placeholder="Nama hadiah" required />
+                    <input id="prizeDescription" maxlength="80" placeholder="Keterangan hadiah" required />
+                    <button id="prizeSubmit" type="submit">Tambah hadiah</button>
+                    <button class="secondary" id="prizeCancel" type="button" hidden>Batal</button>
+                </form>
+                <div class="list" id="prizeList"></div>
+            </section>
+        </main>
+
+        <script>
+            const DEFAULT_CODES = [];
+            const DEFAULT_PRIZES = [];
+            const CODE_KEY = "cattyBunSpinCodes";
+            const PRIZE_KEY = "cattyBunWheelOptions";
+            const USED_KEY = "usedSpin";
+            const qrisForm = document.getElementById("qrisForm");
+            const qrisFile = document.getElementById("qrisFile");
+            const qrisSubmit = document.getElementById("qrisSubmit");
+            const qrisStatus = document.getElementById("qrisStatus");
+            const qrisPreview = document.getElementById("qrisPreview");
+            const qrisMessage = document.getElementById("qrisMessage");
+            const QRIS_STORAGE_KEY = "cattyBunQrisFile";
+            const QRIS_DB_NAME = "cattyBunFileAccess";
+            function openQrisDatabase() {
+                return new Promise((resolve, reject) => {
+                    const request = indexedDB.open(QRIS_DB_NAME, 1);
+                    request.onupgradeneeded = () => request.result.createObjectStore("handles");
+                    request.onsuccess = () => resolve(request.result);
+                    request.onerror = () => reject(request.error);
+                });
+            }
+            async function getSavedQrisDirectory() {
+                const db = await openQrisDatabase();
+                return new Promise((resolve, reject) => {
+                    const request = db.transaction("handles", "readonly").objectStore("handles").get("qris");
+                    request.onsuccess = () => { db.close(); resolve(request.result || null); };
+                    request.onerror = () => { db.close(); reject(request.error); };
+                });
+            }
+            async function saveQrisDirectory(handle) {
+                const db = await openQrisDatabase();
+                return new Promise((resolve, reject) => {
+                    const transaction = db.transaction("handles", "readwrite");
+                    transaction.objectStore("handles").put(handle, "qris");
+                    transaction.oncomplete = () => { db.close(); resolve(); };
+                    transaction.onerror = () => { db.close(); reject(transaction.error); };
+                });
+            }
+            async function getQrisDirectory() {
+                if (!window.showDirectoryPicker) throw new Error("Browser ini belum mendukung akses folder. Gunakan Chrome atau Edge.");
+                let directory = await getSavedQrisDirectory();
+                if (!directory) {
+                    directory = await window.showDirectoryPicker({ mode: "readwrite" });
+                    await saveQrisDirectory(directory);
+                }
+                let permission = await directory.queryPermission({ mode: "readwrite" });
+                if (permission !== "granted") permission = await directory.requestPermission({ mode: "readwrite" });
+                if (permission !== "granted") throw new Error("Izin menulis ke folder qris belum diberikan.");
+                return directory;
+            }
+            const savedQrisFile = localStorage.getItem(QRIS_STORAGE_KEY);
+            if (savedQrisFile) {
+                qrisStatus.textContent = "QRIS tersedia";
+                qrisPreview.src = `qris/${encodeURIComponent(savedQrisFile)}`;
+                qrisPreview.hidden = false;
+            }
+            qrisForm.addEventListener("submit", async (event) => {
+                event.preventDefault();
+                const file = qrisFile.files[0];
+                if (!file) return;
+                if (!["image/png", "image/jpeg", "image/webp"].includes(file.type)) {
+                    qrisMessage.textContent = "Format gambar harus PNG, JPG, atau WebP.";
+                    return;
+                }
+                if (file.size > 5 * 1024 * 1024) {
+                    qrisMessage.textContent = "Ukuran gambar maksimal 5 MB.";
+                    return;
+                }
+                qrisSubmit.disabled = true; qrisMessage.textContent = "Mengunggah QRIS…";
+                try {
+                    const qrisDirectory = await getQrisDirectory();
+                    const extension = file.type === "image/jpeg" ? "jpg" : file.type.split("/")[1];
+                    const filename = `payment-qris.${extension}`;
+                    for (const oldExtension of ["png", "jpg", "webp"]) {
+                        if (oldExtension !== extension) {
+                            try { await qrisDirectory.removeEntry(`payment-qris.${oldExtension}`); } catch (error) {}
+                        }
+                    }
+                    const imageHandle = await qrisDirectory.getFileHandle(filename, { create: true });
+                    const writable = await imageHandle.createWritable();
+                    await writable.write(file);
+                    await writable.close();
+                    localStorage.setItem(QRIS_STORAGE_KEY, filename);
+                    qrisStatus.textContent = "QRIS tersedia";
+                    qrisPreview.src = `qris/${encodeURIComponent(filename)}?t=${Date.now()}`;
+                    qrisPreview.hidden = false; qrisMessage.textContent = "QRIS berhasil disimpan di folder qris.";
+                    qrisForm.reset();
+                } catch (error) {
+                    qrisMessage.textContent = error.name === "AbortError" ? "Pemilihan folder dibatalkan." : error.message;
+                } finally { qrisSubmit.disabled = false; }
+            });
+            const MENU_KEY = "cattyBunMenus";
+            const DEFAULT_MENUS = [
+                { name: "Dalgona Kopi", price: 9000, description: "Busa kopi kocok yang creamy di atas susu dingin. Pahit manisnya pas.", image: "cup", enabled: true },
+                { name: "Brownies Bite", price: 8000, description: "Brownies mungil dengan rasa cokelat yang nikmat.", image: "tray", enabled: true },
+                { name: "Sempol Ayam", price: 5000, description: "Camilan ayam gurih yang cocok dinikmati kapan saja.", image: "sit", enabled: true },
+                { name: "Bundle Asik", price: 15000, description: "Paket pilihan favorit dengan harga lebih asik.", image: "cup", enabled: true },
+            ];
+
+            function readArray(key, fallback) {
+                try {
+                    const raw = localStorage.getItem(key);
+                    if (raw === null) return fallback.map((item) =>
+                        typeof item === "object" ? { ...item } : item,
+                    );
+                    const value = JSON.parse(raw);
+                    return Array.isArray(value) ? value : fallback;
+                } catch (error) {
+                    return fallback;
+                }
+            }
+            let codes = readArray(CODE_KEY, DEFAULT_CODES);
+            let usedCodes = readArray(USED_KEY, []);
+            let prizes = readArray(PRIZE_KEY, DEFAULT_PRIZES);
+            let menus = readArray(MENU_KEY, DEFAULT_MENUS);
+
+            const codeForm = document.getElementById("codeForm");
+            const codeInput = document.getElementById("codeInput");
+            const codeList = document.getElementById("codeList");
+            const codeCount = document.getElementById("codeCount");
+            const prizeForm = document.getElementById("prizeForm");
+            const prizeList = document.getElementById("prizeList");
+            const prizeCount = document.getElementById("prizeCount");
+            const prizeLabel = document.getElementById("prizeLabel");
+            const prizeDescription = document.getElementById("prizeDescription");
+            const prizeSubmit = document.getElementById("prizeSubmit");
+            const prizeCancel = document.getElementById("prizeCancel");
+            const PRIZE_COLORS = [
+                "#E8603C", "#EDC94A", "#7FA544", "#FBF1D3",
+                "#B5432B", "#4C6A8C",
+            ];
+            let editingPrize = -1;
+            let editingMenu = -1;
+            const menuForm = document.getElementById("menuForm");
+            const menuList = document.getElementById("menuList");
+            const menuCount = document.getElementById("menuCount");
+            const menuName = document.getElementById("menuName");
+            const menuPrice = document.getElementById("menuPrice");
+            const menuDescription = document.getElementById("menuDescription");
+            const menuImage = document.getElementById("menuImage");
+            const menuSubmit = document.getElementById("menuSubmit");
+            const menuCancel = document.getElementById("menuCancel");
+
+            function saveMenus() { localStorage.setItem(MENU_KEY, JSON.stringify(menus)); }
+            function resetMenuForm() {
+                editingMenu = -1; menuForm.reset();
+                menuSubmit.textContent = "Tambah menu"; menuCancel.hidden = true;
+            }
+            function renderMenus() {
+                menuList.replaceChildren();
+                const active = menus.filter((item) => item.enabled !== false).length;
+                menuCount.textContent = `${active} aktif / ${menus.length} total`;
+                if (!menus.length) {
+                    const empty = document.createElement("div"); empty.className = "empty";
+                    empty.textContent = "Belum ada menu."; menuList.appendChild(empty); return;
+                }
+                menus.forEach((item, index) => {
+                    const row = document.createElement("div"); row.className = "row" + (item.enabled === false ? " used" : "");
+                    const title = document.createElement("strong"); title.textContent = item.name;
+                    const meta = document.createElement("div"); meta.className = "meta";
+                    meta.textContent = `Rp${Number(item.price).toLocaleString("id-ID")} · ${item.enabled === false ? "Nonaktif · " : ""}${item.description}`;
+                    const actions = document.createElement("div"); actions.className = "actions";
+                    actions.append(actionButton("Edit", "menu-edit", String(index), "secondary"));
+                    actions.append(actionButton(item.enabled === false ? "Aktifkan" : "Nonaktifkan", "menu-toggle", String(index)));
+                    actions.append(actionButton("Hapus", "menu-delete", String(index), "danger"));
+                    row.append(title, meta, actions); menuList.appendChild(row);
+                });
+            }
+            menuForm.addEventListener("submit", (event) => {
+                event.preventDefault();
+                const item = { name: menuName.value.trim(), price: Number(menuPrice.value), description: menuDescription.value.trim(), image: menuImage.value, enabled: true };
+                if (editingMenu >= 0) menus[editingMenu] = { ...menus[editingMenu], ...item };
+                else menus.push(item);
+                saveMenus(); renderMenus(); resetMenuForm();
+            });
+            menuCancel.addEventListener("click", resetMenuForm);
+            menuList.addEventListener("click", (event) => {
+                const button = event.target.closest("button[data-action]"); if (!button) return;
+                const index = Number(button.dataset.value); if (!Number.isInteger(index) || !menus[index]) return;
+                if (button.dataset.action === "menu-edit") {
+                    const item = menus[index]; editingMenu = index;
+                    menuName.value = item.name; menuPrice.value = item.price; menuDescription.value = item.description; menuImage.value = item.image || "cup";
+                    menuSubmit.textContent = "Simpan perubahan"; menuCancel.hidden = false; menuName.focus(); return;
+                }
+                if (button.dataset.action === "menu-toggle") menus[index].enabled = menus[index].enabled === false;
+                if (button.dataset.action === "menu-delete") menus.splice(index, 1);
+                saveMenus(); renderMenus(); resetMenuForm();
+            });
+
+            function saveCodes() {
+                localStorage.setItem(CODE_KEY, JSON.stringify(codes));
+                localStorage.setItem(USED_KEY, JSON.stringify(usedCodes));
+            }
+            function savePrizes() {
+                localStorage.setItem(PRIZE_KEY, JSON.stringify(prizes));
+            }
+            function actionButton(label, action, value, className = "") {
+                const button = document.createElement("button");
+                button.type = "button";
+                button.textContent = label;
+                button.className = className;
+                button.dataset.action = action;
+                button.dataset.value = value;
+                return button;
+            }
+
+            function renderCodes() {
+                codeList.replaceChildren();
+                const available = codes.filter((code) => !usedCodes.includes(code)).length;
+                codeCount.textContent = `${available} tersedia / ${codes.length} total`;
+                if (!codes.length) {
+                    const empty = document.createElement("div");
+                    empty.className = "empty";
+                    empty.textContent = "Belum ada kode spin.";
+                    codeList.appendChild(empty);
+                    return;
+                }
+                codes.forEach((item) => {
+                    const used = usedCodes.includes(item);
+                    const row = document.createElement("div");
+                    row.className = "row" + (used ? " used" : "");
+                    const code = document.createElement("code");
+                    code.textContent = item;
+                    const status = document.createElement("div");
+                    status.className = "meta";
+                    status.textContent = used ? "Sudah dipakai" : "Tersedia untuk spin";
+                    const actions = document.createElement("div");
+                    actions.className = "actions";
+                    actions.append(actionButton("Salin", "copy", item, "secondary"));
+                    if (used) actions.append(actionButton("Aktifkan", "reset", item));
+                    actions.append(actionButton("Hapus", "delete", item, "danger"));
+                    row.append(code, status, actions);
+                    codeList.appendChild(row);
+                });
+            }
+
+            codeForm.addEventListener("submit", (event) => {
+                event.preventDefault();
+                const code = codeInput.value.trim().toUpperCase();
+                if (!code || codes.includes(code)) {
+                    codeInput.setCustomValidity("Kode sudah ada atau tidak valid.");
+                    codeInput.reportValidity();
+                    return;
+                }
+                codeInput.setCustomValidity("");
+                codes.unshift(code);
+                saveCodes();
+                renderCodes();
+                codeForm.reset();
+            });
+            codeInput.addEventListener("input", () => codeInput.setCustomValidity(""));
+            codeList.addEventListener("click", async (event) => {
+                const button = event.target.closest("button[data-action]");
+                if (!button) return;
+                const code = button.dataset.value;
+                if (button.dataset.action === "copy") {
+                    try {
+                        await navigator.clipboard.writeText(code);
+                        button.textContent = "Tersalin!";
+                        setTimeout(() => (button.textContent = "Salin"), 1200);
+                    } catch (error) {
+                        window.prompt("Salin kode spin:", code);
+                    }
+                    return;
+                }
+                if (button.dataset.action === "reset")
+                    usedCodes = usedCodes.filter((item) => item !== code);
+                if (button.dataset.action === "delete") {
+                    codes = codes.filter((item) => item !== code);
+                    usedCodes = usedCodes.filter((item) => item !== code);
+                }
+                saveCodes();
+                renderCodes();
+            });
+
+            function resetPrizeForm() {
+                editingPrize = -1;
+                prizeForm.reset();
+                prizeSubmit.textContent = "Tambah hadiah";
+                prizeCancel.hidden = true;
+            }
+            function renderPrizes() {
+                prizeList.replaceChildren();
+                const activeCount = prizes.filter(
+                    (item) => item.enabled !== false,
+                ).length;
+                prizeCount.textContent = `${activeCount} aktif / ${prizes.length} total`;
+                prizes.forEach((item, index) => {
+                    const isDisabled = item.enabled === false;
+                    const row = document.createElement("div");
+                    row.className = "row" + (isDisabled ? " used" : "");
+                    const label = document.createElement("strong");
+                    label.textContent = item.label;
+                    const meta = document.createElement("div");
+                    meta.className = "meta";
+                    meta.textContent = isDisabled
+                        ? `${item.description} · Nonaktif`
+                        : item.description;
+                    const actions = document.createElement("div");
+                    actions.className = "actions";
+                    actions.append(
+                        actionButton(
+                            "Duplikat",
+                            "duplicate",
+                            String(index),
+                            "secondary",
+                        ),
+                        actionButton("Edit", "edit", String(index), "secondary"),
+                    );
+                    if (isDisabled)
+                        actions.append(
+                            actionButton("Aktifkan", "enable", String(index)),
+                        );
+                    actions.append(
+                        actionButton("Hapus", "delete", String(index), "danger"),
+                    );
+                    row.append(label, meta, actions);
+                    prizeList.appendChild(row);
+                });
+            }
+            prizeForm.addEventListener("submit", (event) => {
+                event.preventDefault();
+                const label = prizeLabel.value.trim().toUpperCase();
+                const description = prizeDescription.value.trim();
+                if (editingPrize >= 0) {
+                    prizes[editingPrize] = {
+                        ...prizes[editingPrize],
+                        label,
+                        description,
+                    };
+                } else {
+                    prizes.push({
+                        label,
+                        description,
+                        type: "prize",
+                        color: PRIZE_COLORS[prizes.length % PRIZE_COLORS.length],
+                        weight: 10,
+                        enabled: true,
+                    });
+                }
+                savePrizes();
+                renderPrizes();
+                resetPrizeForm();
+            });
+            prizeCancel.addEventListener("click", resetPrizeForm);
+            prizeList.addEventListener("click", (event) => {
+                const button = event.target.closest("button[data-action]");
+                if (!button) return;
+                const index = Number(button.dataset.value);
+                if (!Number.isInteger(index) || !prizes[index]) return;
+                if (button.dataset.action === "duplicate") {
+                    prizes.splice(index + 1, 0, {
+                        ...prizes[index],
+                        enabled: true,
+                    });
+                    savePrizes();
+                    renderPrizes();
+                    return;
+                }
+                if (button.dataset.action === "edit") {
+                    const item = prizes[index];
+                    editingPrize = index;
+                    prizeLabel.value = item.label;
+                    prizeDescription.value = item.description;
+                    prizeSubmit.textContent = "Simpan perubahan";
+                    prizeCancel.hidden = false;
+                    prizeLabel.focus();
+                    return;
+                }
+                if (button.dataset.action === "enable") {
+                    prizes[index].enabled = true;
+                    savePrizes();
+                    renderPrizes();
+                    return;
+                }
+                if (prizes.length === 1) {
+                    window.alert("Wheel harus memiliki minimal satu segmen.");
+                    return;
+                }
+                prizes.splice(index, 1);
+                savePrizes();
+                renderPrizes();
+                resetPrizeForm();
+            });
+
+            renderCodes();
+            renderPrizes();
+            renderMenus();
+        </script>
+    </body>
+</html>
